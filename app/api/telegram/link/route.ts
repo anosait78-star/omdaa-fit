@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { disconnectTelegram, getTelegramLink } from '@/lib/telegram';
-import { getAdminKey } from '@/lib/admin-credentials';
+import { sessionRole } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 
 function authed(req: Request) {
-  const key = new URL(req.url).searchParams.get('key') || '';
-  return key && key === getAdminKey();
+  return sessionRole(req) === 'full';
 }
 
 export async function GET(req: Request) {

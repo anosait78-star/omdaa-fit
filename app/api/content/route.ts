@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getActiveContent, saveContent, sanitizeContent } from '@/lib/content-store';
+import { sessionRole } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 // Uploaded photos (data URLs) can push the body size up.
 export const maxDuration = 30;
 
-/** Only the MAIN coach key edits site content (the swim key manages orders only). */
+/** Only the MAIN coach account edits site content (the swim account manages orders only). */
 function authed(req: Request): boolean {
-  const key = new URL(req.url).searchParams.get('key') || '';
-  return key === (process.env.ADMIN_KEY || 'omda-admin');
+  return sessionRole(req) === 'full';
 }
 
 /** Public: the live site content (testimonials, galleries, custom sections). */

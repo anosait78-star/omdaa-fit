@@ -4,49 +4,15 @@
  * add/delete comments, add/replace/delete photos, add whole sections — without
  * a code deploy.
  *
- * Mirrors lib/plans-store.ts: Postgres (omda_settings, key 'content') when
- * DATABASE_URL is set, otherwise a local JSON file. Server-only.
+ * Stored in MongoDB, same `settings` collection as lib/plans-store.ts, doc key
+ * `'content'`. Server-only.
  */
-import { promises as fs } from 'fs';
-import path from 'path';
-import { Pool } from 'pg';
+import { getDb } from './mongo';
 import { DEFAULT_CONTENT, type SiteContent, type Bi } from './content';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const CONTENT_FILE = path.join(DATA_DIR, 'content.json');
-const usePg = !!process.env.DATABASE_URL;
-
-let pgPool: Pool | null = null;
-let pgReady: Promise<void> | null = null;
-
-function pool() {
-  if (!pgPool) {
-    const url = process.env.DATABASE_URL!;
-    const needsSsl = /neon\.tech|sslmode=require/i.test(url);
-    pgPool = new Pool({
-      connectionString: url,
-      max: 3,
-      ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
-    });
-  }
-  return pgPool;
-}
-
-async function sql() {
-  const client = pool();
-  if (!pgReady) {
-    pgReady = client
-      .query(
-        `CREATE TABLE IF NOT EXISTS omda_settings (
-           key TEXT PRIMARY KEY,
-           data JSONB NOT NULL,
-           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-         )`,
-      )
-      .then(() => undefined);
-  }
-  await pgReady;
-  return client;
+async function settings() {
+  const db = await getDb();
+  return db.collection<{ key: string; data: unknown }>('settings');
 }
 
 const bi = (v: any): Bi => ({ ar: String(v?.ar || '').trim(), en: String(v?.en || '').trim() });
@@ -93,30 +59,16 @@ export function sanitizeContent(input: any): SiteContent {
 /** The live content, or the built-in defaults when nothing is saved yet. */
 export async function getActiveContent(): Promise<SiteContent> {
   try {
-    if (usePg) {
-      const client = await sql();
-      const result = await client.query(`SELECT data FROM omda_settings WHERE key = 'content'`);
-      const data = result.rows[0]?.data;
-      if (data && typeof data === 'object') return data as SiteContent;
-      return DEFAULT_CONTENT;
-    }
-    const parsed = JSON.parse(await fs.readFile(CONTENT_FILE, 'utf8'));
-    return parsed?.content && typeof parsed.content === 'object' ? (parsed.content as SiteContent) : DEFAULT_CONTENT;
+    const col = await settings();
+    const doc = await col.findOne({ key: 'content' });
+    const data = doc?.data;
+    return data && typeof data === 'object' ? (data as SiteContent) : DEFAULT_CONTENT;
   } catch {
     return DEFAULT_CONTENT;
   }
 }
 
 export async function saveContent(content: SiteContent): Promise<void> {
-  if (usePg) {
-    const client = await sql();
-    await client.query(
-      `INSERT INTO omda_settings (key, data, updated_at) VALUES ('content', $1, now())
-       ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
-      [JSON.stringify(content)],
-    );
-    return;
-  }
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(CONTENT_FILE, JSON.stringify({ content }, null, 2), 'utf8');
+  const col = await settings();
+  await col.updateOne({ key: 'content' }, { $set: { data: content, updatedAt: new Date() } }, { upsert: true });
 }

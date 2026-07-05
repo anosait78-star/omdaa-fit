@@ -7,8 +7,8 @@
  *    1. The values below (name, colours, contact, payment, links, metadata).
  *    2. The logo image at `public/<logoSrc>` (swap the file, keep the name or
  *       update `logoSrc`).
- *    3. The environment variables (admin key, Telegram bot token, DATABASE_URL)
- *       — see TEMPLATE.md.
+ *    3. The environment variables (admin email/password, Telegram bot token,
+ *       MONGODB_URI) — see TEMPLATE.md.
  *  All page CONTENT (plans, prices, transformations, "who is the coach" copy)
  *  is edited at runtime from the /admin panel, so it is NOT in code.
  */

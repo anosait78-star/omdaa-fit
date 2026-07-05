@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getActivePlans, savePlans, sanitizePlans } from '@/lib/plans-store';
+import { sessionRole } from '@/lib/admin-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function authed(req: Request): boolean {
-  const key = new URL(req.url).searchParams.get('key') || '';
-  return key === (process.env.ADMIN_KEY || 'omda-admin');
+  return sessionRole(req) === 'full';
 }
 
 /**

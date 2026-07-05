@@ -1,25 +1,23 @@
 import { NextResponse } from 'next/server';
 import { listOrdersLight, getOrderImages, findOrder, recordApproval, recordRejection } from '@/lib/store';
 import { toIntlDigits } from '@/lib/site';
-import { getAdminKey, getSwimAdminKey } from '@/lib/admin-credentials';
+import { sessionRole, type AdminRole as Role } from '@/lib/admin-auth';
 import { SWIMMING_PAUSED } from '@/lib/swimming';
 
 export const runtime = 'nodejs';
 
 /**
- * Two admin roles:
- *   • 'full' — the main coach's key (ADMIN_KEY): sees and manages every order.
- *   • 'swim' — Coach Abdullah's key (SWIM_ADMIN_KEY): sees and manages ONLY
- *     Swimmers Bundle orders.
+ * Two admin roles, signed into via /admin (email + password):
+ *   • 'full' — the main coach: sees and manages every order.
+ *   • 'swim' — Coach Abdullah: sees and manages ONLY Swimmers Bundle orders.
  */
-type AdminRole = 'full' | 'swim' | null;
+type AdminRole = Role | null;
 
 function authed(req: Request): AdminRole {
-  const key = new URL(req.url).searchParams.get('key') || '';
-  if (key && key === getAdminKey()) return 'full';
+  const role = sessionRole(req);
   // Swim sub-admin (Coach Abdullah) is disabled while swimming is paused.
-  if (!SWIMMING_PAUSED && key && key === getSwimAdminKey()) return 'swim';
-  return null;
+  if (role === 'swim' && SWIMMING_PAUSED) return null;
+  return role;
 }
 
 const isSwimmers = (o: { bundle?: string | null; planId?: string }) =>

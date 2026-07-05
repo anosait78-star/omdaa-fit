@@ -7,15 +7,17 @@ import type { Plan } from '@/lib/plans';
 type Lang = 'ar' | 'en';
 
 /**
- * Private dashboard for the coach. Enter the admin key to load every paid order.
+ * Private dashboard for the coach. Log in with email + password to load every paid order.
  * Review each customer's intake and receipt, then approve or reject.
  * Fully bilingual (Arabic / English) via the toggle in the header.
  */
 const TX = {
   title: { ar: 'عُمدة · لوحة التحكم', en: 'OMDA · ADMIN' },
-  adminKey: { ar: 'كود الأدمن', en: 'Admin key' },
-  load: { ar: 'تحميل', en: 'Load' },
-  wrongKey: { ar: 'الكود غير صحيح.', en: 'Wrong key.' },
+  loginEmail: { ar: 'الإيميل', en: 'Email' },
+  loginPassword: { ar: 'كلمة المرور', en: 'Password' },
+  load: { ar: 'دخول', en: 'Log in' },
+  logout: { ar: 'تسجيل الخروج', en: 'Log out' },
+  wrongKey: { ar: 'الإيميل أو كلمة المرور غير صحيحة.', en: 'Wrong email or password.' },
   backendError: { ar: 'حصل خطأ في السيرفر. حاول تاني بعد لحظات.', en: 'Admin backend error. Try again in a moment.' },
   noOrders: { ar: 'لا توجد طلبات بعد.', en: 'No orders yet.' },
   months: { ar: 'شهر', en: 'mo' },
@@ -104,8 +106,9 @@ export default function AdminPage() {
   const ar = lang === 'ar';
   const t = <T,>(v: { ar: T; en: T }) => v[lang];
 
-  const [key, setKey] = useState('');
-  // 'full' = main coach key; 'swim' = Coach Abdullah's key (Swimmers Bundle only).
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  // 'full' = main coach account; 'swim' = Coach Abdullah's account (Swimmers Bundle only).
   const [role, setRole] = useState<'full' | 'swim'>('full');
   // The dashboard is organised into sections: approvals / pricing / content.
   const [section, setSection] = useState<'orders' | 'pricing' | 'content'>('orders');
@@ -125,13 +128,64 @@ export default function AdminPage() {
   const loadPhotos = async (orderId: string) => {
     setPhotoBusy(orderId);
     try {
-      const res = await fetch(
-        `/api/accounts?key=${encodeURIComponent(key)}&images=${encodeURIComponent(orderId)}`,
-      );
+      const res = await fetch(`/api/accounts?images=${encodeURIComponent(orderId)}`);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.images) setPhotos((p) => ({ ...p, [orderId]: data.images }));
     } finally {
       setPhotoBusy(null);
+    }
+  };
+
+  /** Fetch orders (and, for the main coach, Telegram status) using the session cookie. */
+  const fetchOrders = async () => {
+    const res = await fetch('/api/accounts');
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) return false;
+    if (!res.ok) {
+      setError(data?.error || t(TX.backendError));
+      return false;
+    }
+    setOrders(data.orders || []);
+    const nextRole = data.role === 'swim' ? 'swim' : 'full';
+    setRole(nextRole);
+    if (nextRole === 'full') {
+      fetch('/api/telegram/link')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => setTelegram(d))
+        .catch(() => setTelegram(null));
+    } else {
+      setTelegram(null);
+    }
+    return true;
+  };
+
+  /** Restore the dashboard on page load if a valid session cookie is present. */
+  useEffect(() => {
+    fetch('/api/admin/session')
+      .then((r) => (r.ok ? fetchOrders() : null))
+      .catch(() => null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const login = async () => {
+    if (loading) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) return setError(t(TX.wrongKey));
+      if (!res.ok) return setError(data?.error || t(TX.backendError));
+      setPassword('');
+      await fetchOrders();
+    } catch {
+      setError(t(TX.backendError));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -140,21 +194,7 @@ export default function AdminPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch(`/api/accounts?key=${encodeURIComponent(key)}`);
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401) return setError(t(TX.wrongKey));
-      if (!res.ok) return setError(data?.error || t(TX.backendError));
-      setOrders(data.orders || []);
-      const nextRole = data.role === 'swim' ? 'swim' : 'full';
-      setRole(nextRole);
-      if (nextRole === 'full') {
-        fetch(`/api/telegram/link?key=${encodeURIComponent(key)}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((d) => setTelegram(d))
-          .catch(() => setTelegram(null));
-      } else {
-        setTelegram(null);
-      }
+      await fetchOrders();
     } catch {
       setError(t(TX.backendError));
     } finally {
@@ -162,9 +202,17 @@ export default function AdminPage() {
     }
   };
 
+  const logout = async () => {
+    await fetch('/api/admin/logout', { method: 'POST' }).catch(() => null);
+    setOrders(null);
+    setTelegram(null);
+    setEmail('');
+    setPassword('');
+  };
+
   const refreshTelegram = async () => {
-    if (role !== 'full' || !key.trim()) return;
-    const res = await fetch(`/api/telegram/link?key=${encodeURIComponent(key)}`);
+    if (role !== 'full') return;
+    const res = await fetch('/api/telegram/link');
     const data = await res.json().catch(() => null);
     if (res.ok) setTelegram(data);
   };
@@ -174,7 +222,7 @@ export default function AdminPage() {
     setTelegramBusy(true);
     setError('');
     try {
-      const res = await fetch(`/api/telegram/link?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
+      const res = await fetch('/api/telegram/link', { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) setError(data?.error || t(TX.backendError));
       await refreshTelegram();
@@ -189,7 +237,7 @@ export default function AdminPage() {
     setBusyId(orderId);
     setError('');
     try {
-      const res = await fetch(`/api/accounts?key=${encodeURIComponent(key)}`, {
+      const res = await fetch('/api/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId }),
@@ -207,7 +255,7 @@ export default function AdminPage() {
     setBusyId(orderId);
     setError('');
     try {
-      const res = await fetch(`/api/accounts?key=${encodeURIComponent(key)}`, {
+      const res = await fetch('/api/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, action: 'reject', reason }),
@@ -270,24 +318,35 @@ export default function AdminPage() {
           {/* Glass sign-in card */}
           <div className="glass rounded-[28px] p-7">
             <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.2em] text-white/45">
-              {t(TX.adminKey)}
+              {t(TX.loginEmail)}
             </label>
-            <div className="relative">
-              <input
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                type="password"
-                placeholder="••••••••••"
-                dir="ltr"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && load()}
-                className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3.5 text-sm tracking-wide text-white outline-none transition focus:border-blood/60 focus:bg-black/35 focus:ring-2 focus:ring-blood/25"
-              />
-            </div>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              placeholder="omda@admin.com"
+              dir="ltr"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && login()}
+              className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3.5 text-sm tracking-wide text-white outline-none transition focus:border-blood/60 focus:bg-black/35 focus:ring-2 focus:ring-blood/25"
+            />
+
+            <label className="mb-2 mt-4 block text-[11px] font-bold uppercase tracking-[0.2em] text-white/45">
+              {t(TX.loginPassword)}
+            </label>
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              placeholder="••••••••••"
+              dir="ltr"
+              onKeyDown={(e) => e.key === 'Enter' && login()}
+              className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3.5 text-sm tracking-wide text-white outline-none transition focus:border-blood/60 focus:bg-black/35 focus:ring-2 focus:ring-blood/25"
+            />
 
             <button
-              onClick={load}
-              disabled={loading || !key.trim()}
+              onClick={login}
+              disabled={loading || !email.trim() || !password.trim()}
               className="sheen mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-paper px-6 py-3.5 text-sm font-black uppercase tracking-[0.12em] text-ink transition-all duration-200 hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {loading ? (
@@ -352,6 +411,12 @@ export default function AdminPage() {
             >
               {ar ? 'EN' : 'ع'}
             </button>
+            <button
+              onClick={logout}
+              className="rounded-full border border-red-500/30 bg-red-500/[0.05] px-3.5 py-1.5 text-xs font-bold text-red-300 transition hover:bg-red-500/10"
+            >
+              {t(TX.logout)}
+            </button>
           </div>
         </div>
         {error && <p className="mt-3 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">{error}</p>}
@@ -407,7 +472,7 @@ export default function AdminPage() {
         )}
 
         {/* Section tabs: Approvals / Pricing / Content. Pricing & content are
-            the MAIN coach's full-control areas; the swim key sees orders only. */}
+            the MAIN coach's full-control areas; the swim account sees orders only. */}
         {orders && role === 'full' && (
           <div className="glass mt-6 inline-flex flex-wrap gap-1.5 rounded-full p-1.5">
             {([
@@ -430,8 +495,8 @@ export default function AdminPage() {
           </div>
         )}
 
-        {orders && role === 'full' && section === 'pricing' && <PricingManager keyValue={key} t={t} />}
-        {orders && role === 'full' && section === 'content' && <ContentManager keyValue={key} t={t} ar={ar} onZoom={setZoom} />}
+        {orders && role === 'full' && section === 'pricing' && <PricingManager t={t} />}
+        {orders && role === 'full' && section === 'content' && <ContentManager t={t} ar={ar} onZoom={setZoom} />}
 
         {orders && (role === 'swim' || section === 'orders') && (
           <div className="mt-8 grid gap-4">
@@ -620,7 +685,7 @@ const blankPlan = (): Plan => ({
   featured: false,
 });
 
-function PricingManager({ keyValue, t }: { keyValue: string; t: <T,>(v: { ar: T; en: T }) => T }) {
+function PricingManager({ t }: { t: <T,>(v: { ar: T; en: T }) => T }) {
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -662,7 +727,7 @@ function PricingManager({ keyValue, t }: { keyValue: string; t: <T,>(v: { ar: T;
     setErr('');
     setMsg('');
     try {
-      const res = await fetch(`/api/plans?key=${encodeURIComponent(keyValue)}`, {
+      const res = await fetch('/api/plans', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plans }),
@@ -871,7 +936,7 @@ function compressImage(file: File, maxSide = 1100, quality = 0.7): Promise<strin
  * transformation + swimmer photo galleries (add / replace / delete) and custom
  * sections (add / edit / delete). Persisted to omda_settings via /api/content.
  */
-function ContentManager({ keyValue, t, ar, onZoom }: { keyValue: string; t: <T,>(v: { ar: T; en: T }) => T; ar: boolean; onZoom: (src: string) => void }) {
+function ContentManager({ t, ar, onZoom }: { t: <T,>(v: { ar: T; en: T }) => T; ar: boolean; onZoom: (src: string) => void }) {
   const [content, setContent] = useState<SiteContent | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -888,7 +953,7 @@ function ContentManager({ keyValue, t, ar, onZoom }: { keyValue: string; t: <T,>
     if (!content) return;
     setBusy(true); setErr(''); setMsg('');
     try {
-      const res = await fetch(`/api/content?key=${encodeURIComponent(keyValue)}`, {
+      const res = await fetch('/api/content', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),

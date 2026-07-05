@@ -1,20 +1,11 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import { Pool } from 'pg';
 import type { Order } from './store';
 import { findOrder, recordApproval, recordRejection, getOrderImages, IMAGE_KEYS } from './store';
 import { toIntlDigits } from './site';
-import { getOmdaAdminCredentials } from './admin-credentials';
+import { getDb } from './mongo';
 
 type InlineButton = { text: string; callback_data?: string; url?: string };
 type InlineKeyboard = { inline_keyboard: InlineButton[][] };
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
-const usePg = !!process.env.DATABASE_URL;
-
-let pgPool: Pool | null = null;
-let pgReady: Promise<void> | null = null;
 let botUsername: string | null = null;
 
 function token() {
@@ -29,79 +20,25 @@ function api(method: string) {
   return `https://api.telegram.org/bot${token()}/${method}`;
 }
 
-function pool() {
-  if (!pgPool) {
-    const url = process.env.DATABASE_URL!;
-    const needsSsl = /neon\.tech|sslmode=require/i.test(url);
-    pgPool = new Pool({
-      connectionString: url,
-      max: 3,
-      ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
-    });
-  }
-  return pgPool;
-}
-
-async function sql() {
-  const client = pool();
-  if (!pgReady) {
-    pgReady = client
-      .query(
-        `CREATE TABLE IF NOT EXISTS omda_settings (
-           key TEXT PRIMARY KEY,
-           data JSONB NOT NULL,
-           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-         )`,
-      )
-      .then(() => undefined);
-  }
-  await pgReady;
-  return client;
-}
-
-async function readLocalSettings() {
-  try {
-    return JSON.parse(await fs.readFile(SETTINGS_FILE, 'utf8')) || {};
-  } catch {
-    return {};
-  }
+async function settingsCol() {
+  const db = await getDb();
+  return db.collection<{ key: string; data: unknown }>('settings');
 }
 
 async function getSetting<T>(key: string): Promise<T | null> {
-  if (usePg) {
-    const client = await sql();
-    const result = await client.query(`SELECT data FROM omda_settings WHERE key = $1`, [key]);
-    return result.rows[0]?.data ?? null;
-  }
-  return (await readLocalSettings())[key] ?? null;
+  const col = await settingsCol();
+  const doc = await col.findOne({ key });
+  return (doc?.data as T) ?? null;
 }
 
 async function setSetting(key: string, data: unknown) {
-  if (usePg) {
-    const client = await sql();
-    await client.query(
-      `INSERT INTO omda_settings (key, data, updated_at) VALUES ($1, $2, now())
-       ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
-      [key, JSON.stringify(data)],
-    );
-    return;
-  }
-  const settings = await readLocalSettings();
-  settings[key] = data;
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+  const col = await settingsCol();
+  await col.updateOne({ key }, { $set: { data, updatedAt: new Date() } }, { upsert: true });
 }
 
 async function deleteSetting(key: string) {
-  if (usePg) {
-    const client = await sql();
-    await client.query(`DELETE FROM omda_settings WHERE key = $1`, [key]);
-    return;
-  }
-  const settings = await readLocalSettings();
-  delete settings[key];
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+  const col = await settingsCol();
+  await col.deleteOne({ key });
 }
 
 async function resolveBotUsername() {
@@ -243,24 +180,23 @@ function helpMessage() {
     'لما تضغط رفض → هيطلب منك سبب الرفض، وبعدها زرار واتساب لإبلاغ العميل.',
     '',
     'الأوامر:',
-    '/credentials — باسوورد لوحة الأدمن',
+    '/credentials — رابط لوحة الأدمن',
     '/help — المساعدة دي',
   ].join('\n');
 }
 
+/**
+ * Passwords are now hashed in MongoDB (no plaintext to show), so this just
+ * points the coach to the login page — the email/password were set up when
+ * the account was created (ADMIN_EMAIL/ADMIN_PASSWORD, or reset from /admin).
+ */
 function credentialsMessage() {
-  const credentials = getOmdaAdminCredentials();
   return [
     'بيانات دخول OmdaFit admin',
     'https://omdafit.vercel.app/admin',
     '',
-    ...credentials.flatMap((credential, index) => [
-      `${index + 1}. ${credential.label}`,
-      `Password: ${credential.password}`,
-      `Scope: ${credential.scope}`,
-      '',
-    ]),
-  ].join('\n').trim();
+    'سجّل دخولك بالإيميل والباسورد اللي ضبطتهم وقت الإعداد.',
+  ].join('\n');
 }
 
 async function getConnectedChatId() {
