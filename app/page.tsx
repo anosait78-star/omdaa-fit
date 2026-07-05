@@ -191,7 +191,7 @@ export default function Home() {
               {t(T.hero.sub)}
             </p>
             <div className="mt-9 flex animate-fade-up flex-wrap gap-3" style={{ animationDelay: '180ms' }}>
-              <Link href="/subscribe" className="rounded-full bg-blood px-8 py-4 text-sm font-bold text-white transition hover:bg-red-500">{t(T.hero.cta)}</Link>
+              <Link href="/subscribe1" className="rounded-full bg-blood px-8 py-4 text-sm font-bold text-white transition hover:bg-red-500">{t(T.hero.cta)}</Link>
               <a href="#pricing" className="rounded-full border border-blood/50 px-8 py-4 text-sm font-bold text-paper transition hover:bg-blood/10">{t(T.hero.ctaAlt)}</a>
             </div>
           </div>
@@ -324,7 +324,7 @@ export default function Home() {
         <div className="mx-auto max-w-4xl px-6 py-24 text-center">
           <h2 className="text-4xl font-black tracking-tight md:text-6xl">{t(T.finalCta.title)}</h2>
           <p className="mt-4 text-white/55">{t(T.finalCta.sub)}</p>
-          <Link href="/subscribe" className="mt-9 inline-block rounded-full bg-blood px-10 py-4 text-sm font-bold text-white transition hover:bg-red-500">{t(T.finalCta.cta)}</Link>
+          <Link href="/subscribe1" className="mt-9 inline-block rounded-full bg-blood px-10 py-4 text-sm font-bold text-white transition hover:bg-red-500">{t(T.finalCta.cta)}</Link>
         </div>
       </section>
 
@@ -372,7 +372,7 @@ function Nav({ lang, setLang, t }: { lang: Lang; setLang: (l: Lang) => void; t: 
           <button onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="rounded-full border hair px-3 py-1.5 text-xs font-bold text-white/70 transition hover:text-white">
             {lang === 'ar' ? 'EN' : 'ع'}
           </button>
-          <Link href="/subscribe" className="rounded-full bg-blood px-5 py-2 text-xs font-bold text-white transition hover:bg-red-500">{t(T.nav.subscribe)}</Link>
+          <Link href="/subscribe1" className="rounded-full bg-blood px-5 py-2 text-xs font-bold text-white transition hover:bg-red-500">{t(T.nav.subscribe)}</Link>
         </div>
       </nav>
     </header>
@@ -445,7 +445,7 @@ function PlanCard({ p, t, swim = false }: { p: Plan; t: <T,>(v: { ar: T; en: T }
           {t({ ar: 'قريبًا', en: 'Soon' })}
         </button>
       ) : (
-        <Link href={`/subscribe?plan=${p.id}`} className={`mt-6 rounded-full px-5 py-3 text-center text-sm font-bold transition ${p.featured ? 'bg-white text-ink hover:bg-white/85' : `${accentBg} text-white ${accentHover}`}`}>
+        <Link href="/subscribe1" className={`mt-6 rounded-full px-5 py-3 text-center text-sm font-bold transition ${p.featured ? 'bg-white text-ink hover:bg-white/85' : `${accentBg} text-white ${accentHover}`}`}>
           {t({ ar: 'اشترك', en: 'Subscribe' })}
         </Link>
       )}
