@@ -180,7 +180,7 @@ export default function Home() {
       {/* HERO */}
       <section
         className="vignette relative overflow-hidden border-b hair bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/coach/panar2.webp')" }}
+        style={{ backgroundImage: "url('/coach/panar3.webp')" }}
       >
         <div className="absolute inset-0 bg-black/60" />
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-transparent" />
