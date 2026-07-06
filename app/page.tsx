@@ -178,8 +178,13 @@ export default function Home() {
       <Nav lang={lang} setLang={setLang} t={t} />
 
       {/* HERO */}
-      <section className="vignette relative overflow-hidden border-b hair">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 pt-24 pb-16 md:grid-cols-2 md:pt-32 md:pb-24">
+      <section
+        className="vignette relative overflow-hidden border-b hair bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/coach/panar2.webp')" }}
+      >
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-transparent" />
+        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-6 pt-24 pb-16 md:grid-cols-2 md:pt-32 md:pb-24">
           <div>
             <p className="kicker animate-fade-up">{t(T.hero.eyebrow)}</p>
             <h1 className="mt-6 animate-fade-up text-5xl font-black leading-[1.05] tracking-tight md:text-7xl" style={{ animationDelay: '60ms' }}>
@@ -209,7 +214,9 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <Marquee />
+        <div className="relative z-10">
+          <Marquee />
+        </div>
       </section>
 
       {/* SERVICES */}
