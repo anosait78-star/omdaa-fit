@@ -19,7 +19,7 @@ export const SITE = {
   coachName: { ar: 'كابتن عمده', en: 'Coach Omda' },
 
   /** Logo file under /public. Swap the image to rebrand. */
-  logoSrc: '/omdafit-logo.jpg',
+  logoSrc: '/logo2.png',
 
   /** Brand accent colour (the action red). Drives the whole site via the
    *  `--brand-rgb` CSS variable injected in the root layout — change this one
