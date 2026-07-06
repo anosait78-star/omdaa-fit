@@ -381,7 +381,7 @@ export default function Home() {
 function Nav({ lang, setLang, t }: { lang: Lang; setLang: (l: Lang) => void; t: <T,>(v: { ar: T; en: T }) => T }) {
   return (
     <header className="sticky top-0 z-40 border-b hair bg-ink/80 backdrop-blur-md">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between py-4 pl-6 pr-3 md:pr-6">
         <LogoMark className="h-12 w-48" />
         <div className="hidden items-center gap-7 text-sm text-white/65 md:flex">
           <a href="#services" className="transition hover:text-white">{t(T.nav.services)}</a>
