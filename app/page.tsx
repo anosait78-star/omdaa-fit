@@ -182,7 +182,13 @@ export default function Home() {
         className="vignette relative overflow-hidden border-b hair bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/coach/panar3.webp')" }}
       >
-        <div className="absolute inset-0 bg-black/60" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(circle at top right, transparent 0%, transparent 18%, rgba(0,0,0,0.6) 35%, rgba(0,0,0,0.75) 100%)',
+          }}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-transparent" />
         <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-6 pt-24 pb-16 md:grid-cols-2 md:pt-32 md:pb-24">
           <div>
