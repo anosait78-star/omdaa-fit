@@ -179,7 +179,7 @@ export default function Home() {
 
       {/* HERO */}
       <section
-        className="vignette relative overflow-hidden border-b hair bg-cover bg-[80%_center] bg-no-repeat md:bg-center"
+        className="vignette relative overflow-hidden border-b hair bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/coach/panar3.webp')" }}
       >
         <div
@@ -187,6 +187,14 @@ export default function Home() {
           style={{
             background:
               'radial-gradient(circle at top right, transparent 0%, transparent 18%, rgba(0,0,0,0.6) 35%, rgba(0,0,0,0.75) 100%)',
+          }}
+        />
+        {/* Mobile-only: hides the OMDAFIT mark baked into the banner image. */}
+        <div
+          className="absolute inset-x-0 top-0 h-40 md:hidden"
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.45) 20%, rgba(0,0,0,0.15) 40%, transparent 60%)',
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-transparent" />
