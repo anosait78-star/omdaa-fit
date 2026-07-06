@@ -179,7 +179,7 @@ export default function Home() {
 
       {/* HERO */}
       <section
-        className="vignette relative overflow-hidden border-b hair bg-cover bg-right bg-no-repeat md:bg-center"
+        className="vignette relative overflow-hidden border-b hair bg-cover bg-[80%_center] bg-no-repeat md:bg-center"
         style={{ backgroundImage: "url('/coach/panar3.webp')" }}
       >
         <div
