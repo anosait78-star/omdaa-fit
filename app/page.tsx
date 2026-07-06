@@ -197,8 +197,10 @@ export default function Home() {
           </div>
           <div className="animate-fade-up" style={{ animationDelay: '160ms' }}>
             <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-[2rem] border hair">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/coach/coach-1.jpg" alt={t(SITE.coachName)} className="h-full w-full object-cover grayscale" />
+              <video autoPlay muted loop playsInline className="h-full w-full object-cover rounded-[2rem]">
+                <source src="/coach/panar1.mp4" type="video/mp4" />
+              </video>
+              <div className="absolute inset-0 bg-black/30" />
               <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-transparent" />
               <div className="absolute bottom-0 p-6">
                 <div className="text-xl font-black">{t(SITE.coachName)}</div>

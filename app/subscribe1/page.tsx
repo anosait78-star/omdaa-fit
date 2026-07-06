@@ -10,7 +10,7 @@ const TX = {
   back: { ar: 'الرئيسية', en: 'Home' },
   title: { ar: 'ابدأ اشتراكك', en: 'Start your subscription' },
   sub: {
-    ar: 'اكتب بياناتك الأساسية وهنحولك مباشرة للتواصل مع الكابتن على واتساب.',
+    ar: 'اكتب بياناتك الأساسية وهنحولك مباشرة للتواصل مع الكابتن  واتساب.',
     en: "Enter your basic info and we'll connect you with the coach on WhatsApp right away.",
   },
   fullName: { ar: 'الاسم بالكامل', en: 'Full name' },
