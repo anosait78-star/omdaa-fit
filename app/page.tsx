@@ -382,7 +382,7 @@ function Nav({ lang, setLang, t }: { lang: Lang; setLang: (l: Lang) => void; t: 
   return (
     <header className="sticky top-0 z-40 border-b hair bg-ink/80 backdrop-blur-md">
       <nav className="mx-auto flex max-w-6xl items-center justify-between py-4 pl-6 pr-3 md:pr-6">
-        <LogoMark className="h-12 w-48" />
+        <LogoMark className="h-12 w-48" imgClassName="object-right md:object-left" />
         <div className="hidden items-center gap-7 text-sm text-white/65 md:flex">
           <a href="#services" className="transition hover:text-white">{t(T.nav.services)}</a>
           <a href="#about" className="transition hover:text-white">{t(T.nav.about)}</a>
@@ -402,11 +402,11 @@ function Nav({ lang, setLang, t }: { lang: Lang; setLang: (l: Lang) => void; t: 
   );
 }
 
-function LogoMark({ className = 'h-9 w-32' }: { className?: string }) {
+function LogoMark({ className = 'h-9 w-32', imgClassName = 'object-left' }: { className?: string; imgClassName?: string }) {
   return (
     <Link href="/" aria-label={`${SITE.brand} home`} className={`block overflow-hidden ${className}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={SITE.logoSrc} alt={SITE.brand} className="h-full w-full object-contain object-left" />
+      <img src={SITE.logoSrc} alt={SITE.brand} className={`h-full w-full object-contain ${imgClassName}`} />
     </Link>
   );
 }
